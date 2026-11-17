@@ -153,7 +153,8 @@ function run(){
   $('#s2').textContent=b.trades+' trades · maxDD '+(b.dd*100).toFixed(1)+'%';
   var decay=b.ret-a.ret;
   $('#verdict').innerHTML='<b>'+ (decay<0?'The edge did not survive.':'It held up.') +'</b> '+
-    'Out-of-sample came in '+fmt(decay)+' versus in-sample over the same frozen parameters.'+
+    'Same frozen parameters: in-sample '+fmt(a.ret)+', out-of-sample '+fmt(b.ret)+
+    ' — a '+Math.abs(decay*100).toFixed(1)+'-point '+(decay<0?'drop':'gain')+'.'+
     (b.trades<20?' With only '+b.trades+' out-of-sample trades, that number is close to noise.':'')+
     ' Judge the strategy on the out-of-sample line, not on the one you optimised.';
   $('#note').textContent='Net of '+base.fee+' bps fee + '+base.slip+' bps slippage per side and '+base.fund+'% funding per 8h. Split: '+isP+'% in-sample / '+(100-isP)+'%. Bars: '+n+' ('+base.h+'h).';
