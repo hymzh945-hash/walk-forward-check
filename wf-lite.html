@@ -183,17 +183,29 @@ function load(text,name){
   run();
 }
 function sample(){
-  var n=1600,px=100,out=[],seed=7;
+  // Seeded synthetic series: first 70% has clean trends (EMA cross works),
+  // last 30% is mean-reverting chop (the same params bleed out).
+  var n=1600,px=100,out=[],seed=7,TEND=1120;
   function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff}
   var t0=Date.parse('2024-01-01T00:00:00Z');
-  var reg=[{d:0.0005,v:0.011},{d:-0.0006,v:0.019},{d:0.00005,v:0.008},{d:0.00045,v:0.013}];
+  var drift=0,left=0,hist=[],ma=null;
   for(var i=0;i<n;i++){
-    var rg=reg[Math.min(3,Math.floor(i/(n/4)))];var o=px;
-    var r=rg.d+rg.v*(rnd()*2-1);var c=Math.max(0.5,o*(1+r));
-    out.push([new Date(t0+i*4*3600*1000).toISOString(),o.toFixed(2),Math.max(o,c)*(1+rnd()*0.002),Math.min(o,c)*(1-rnd()*0.002),c.toFixed(2),Math.round(500+rnd()*2000)]);
+    var o=px,r;
+    if(i<TEND){
+      if(left<=0){left=40;var u=rnd();drift=(u<0.55?0.0016:(u<0.85?-0.0012:0))}
+      left--;
+      r=drift+0.006*(rnd()*2-1);
+    }else{
+      var m=(ma===null?px:ma);
+      r=-0.06*((px-m)/m)+0.012*(rnd()*2-1);
+    }
+    var c=Math.max(0.5,o*(1+r));
+    hist.push(c);if(hist.length>40)hist.shift();
+    if(hist.length>=40){var s=0;for(var q=0;q<hist.length;q++)s+=hist[q];ma=s/40}
+    out.push([new Date(t0+i*4*3600*1000).toISOString(),o.toFixed(2),Math.max(o,c)*(1+rnd()*0.0015),Math.min(o,c)*(1-rnd()*0.0015),c.toFixed(2),Math.round(500+rnd()*2000)]);
     px=c;
   }
-  load('time,open,high,low,close,volume\n'+out.map(function(r){return r.join(',')}).join('\n'),'sample (synthetic, 1600 × 4h)');
+  load('time,open,high,low,close,volume\n'+out.map(function(r){return r.join(',')}).join('\n'),'sample (synthetic, 1600 × 4h) · trends then chop');
 }
 $('#drop').addEventListener('click',function(){$('#file').click()});
 $('#file').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){load(String(fr.result),f.name)};fr.readAsText(f)});
@@ -202,7 +214,7 @@ $('#file').addEventListener('change',function(e){var f=e.target.files[0];if(!f)r
 $('#drop').addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){load(String(fr.result),f.name)};fr.readAsText(f)});
 $('#sample').addEventListener('click',function(e){e.preventDefault();sample()});
 $('#run').addEventListener('click',function(){run()});
-sample();
+sample();run();
 </script>
 </body>
 </html>
